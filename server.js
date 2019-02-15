@@ -33,8 +33,8 @@ const routes = {
     POST: createComment
   },
   "/comments/:id": {
-    PUT: updateArticle,
-    DELETE: deleteArticle
+    PUT: updateComment,
+    DELETE: deleteComment
   },
   "/comments/:id/upvote": {
     PUT: updateArticle
@@ -49,6 +49,7 @@ function createComment(url, request) {
   const response = {};
 
   if (
+    /* If the comment and its key value pairs exist */
     requestComment &&
     requestComment.body &&
     requestComment.articleId &&
@@ -56,6 +57,7 @@ function createComment(url, request) {
     database.users[requestComment.username] &&
     database.articles[requestComment.articleId]
   ) {
+    // defining what a comment is
     const comment = {
       id: database.nextCommentId++,
       body: requestComment.body,
@@ -65,8 +67,11 @@ function createComment(url, request) {
       downvotedBy: []
     };
 
+    // checks the database for a comment with the same comment id and then creates a new comment
     database.comments[comment.id] = comment;
+    // attaches comment id with the correct username
     database.users[comment.username].commentIds.push(comment.id);
+    // attaches comment id with the correct username
     database.articles[comment.articleId].commentIds.push(comment.id);
 
     response.body = { comment: comment };
@@ -77,6 +82,76 @@ function createComment(url, request) {
 
   return response;
 }
+
+function updateComment(url, request) {
+  const id = Number(url.split("/").filter(segment => segment)[1]);
+  const savedComment = database.comments[id];
+  const requestComment = request.body && request.body.comment;
+  const response = {};
+
+  if (!id || !requestComment) {
+    response.status = 400; // 400 server error - bad request when the id or requestComment DNE
+  } else if (!savedComment) {
+    response.status = 404; // 404 server error - the id exists however there is no saved comment for it, comment DNE
+  } else {
+    savedComment.title = requestComment.title || savedComment.title;
+    savedComment.url = requestComment.url || savedComment.url;
+
+    response.body = { article: savedArticle };
+    response.status = 200;
+  }
+
+  return response;
+}
+
+function deleteComment(url, request) {
+  const id = Number(url.split("/").filter(segment => segment)[1]);
+  const savedComment = database.comments[id];
+  const response = {};
+
+  if (savedComment) {
+    database.comments[id] = null; // deletes the comment given the id number
+    // removes the comment from user comments
+    database.users[savedComment.username].commentIds.splice(
+      database.users[savedComment.username].commentIds.indexOf(savedComment.id),
+      1
+    );
+    // removes the comment from article comments
+    database.articles[savedComment.articleId].commentIds.splice(
+      database.articles[savedComment.articleId].commentIds.indexOf(
+        savedComment.id
+      ),
+      1
+    );
+    response.status = 204;
+  } else {
+    response.status = 404;
+  }
+
+  return response;
+}
+
+// can maybe put this for front end and test later
+/* function getComment(url, request) {
+  const id = Number(url.split("/").filter(segment => segment)[1]);
+  const comment = database.comments[id];
+  const response = {};
+
+  if (comment) {
+    comment.article = comment.articleId.map(
+      articleId => database.articles[articleId]
+    );
+
+    response.body = { comment: comment };
+    response.status = 200;
+  } else if (id) {
+    response.status = 404;
+  } else {
+    response.status = 400;
+  }
+
+  return response;
+} */
 
 function getUser(url, request) {
   const username = url.split("/").filter(segment => segment)[1];
