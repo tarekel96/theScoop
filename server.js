@@ -37,10 +37,10 @@ const routes = {
     DELETE: deleteComment
   },
   "/comments/:id/upvote": {
-    PUT: updateArticle
+    PUT: upvoteComment
   },
   "/comments/:id/downvote": {
-    PUT: updateArticle
+    PUT: downvoteComment
   }
 };
 
@@ -94,10 +94,9 @@ function updateComment(url, request) {
   } else if (!savedComment) {
     response.status = 404; // 404 server error - the id exists however there is no saved comment for it, comment DNE
   } else {
-    savedComment.title = requestComment.title || savedComment.title;
-    savedComment.url = requestComment.url || savedComment.url;
+    savedComment.body = requestComment.body || savedComment.body; // if no errors, updates the comment
 
-    response.body = { article: savedArticle };
+    response.body = { comment: savedComment };
     response.status = 200;
   }
 
@@ -126,6 +125,42 @@ function deleteComment(url, request) {
     response.status = 204;
   } else {
     response.status = 404;
+  }
+
+  return response;
+}
+
+function upvoteComment(url, request) {
+  const id = Number(url.split("/").filter(segment => segment)[1]); // function that returns the first number of a URL
+  const username = request.body && request.body.username; // user for that comment
+  let savedComment = database.comments[id]; // searches the database for that comment by using the comment's id
+  const response = {};
+
+  if (savedComment && database.users[username]) {
+    savedComment = upvote(savedComment, username);
+
+    response.body = { comment: savedComment };
+    response.status = 200;
+  } else {
+    response.status = 400;
+  }
+
+  return response;
+}
+
+function downvoteComment(url, request) {
+  const id = Number(url.split("/").filter(segment => segment)[1]); // function that returns the first number of a URL
+  const username = request.body && request.body.username; // user for that comment
+  let savedComment = database.comments[id]; // searches the database for that comment by using the comment's id
+  const response = {};
+
+  if (savedComment && database.users[username]) {
+    savedComment = downvote(savedComment, username);
+
+    response.body = { comment: savedComment };
+    response.status = 200;
+  } else {
+    response.status = 400;
   }
 
   return response;
